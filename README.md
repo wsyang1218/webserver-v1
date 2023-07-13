@@ -59,14 +59,29 @@
 ### 变量说明
 **静态变量**用于存放一些全局的属性，包括（1）epoll文件描述符`m_epollfd`；（2）当前的用户总数`m_user_count`；（3）读写缓冲区的大小 
 
-**私有变量**用于存放当前连接的一些属性，包括：（1）当前连接的信息，如用于操作该连接的socket文件描述符`m_sockfd`、该连接的客户端地址`m_addr`；（2）读写缓冲区的信息，如读缓冲区（用数组表示）`m_read_buf`和用于标识读缓冲区中已经读入的客户端数据的最后一个字节的下一个位置`m_read_idx`，相应
+**私有变量**用于存放当前连接的一些属性，包括：
+1. 当前连接的信息，如用于操作该连接的socket文件描述符`m_sockfd`、该连接的客户端地址`m_addr`。
+2. 读写缓冲区的信息，如读缓冲区（用数组表示）`m_read_buf`和用于标识读缓冲区中已经读入的客户端数据的最后一个字节的下一个位置`m_read_idx`；
+3. 
 
 ### 工具类方法说明
 包括用于将文件描述符设置为非阻塞的函数`setnonblocking`，该函数通过调用fcntl方法实现，修改`flag`添加`O_NONBLOCK`属性即可。
 
 除此之外还有`addfd/removefd/modfd`方法，其中：
 `addfd`用于向epoll中添加需要监听的文件描述符，需要添加的文件描述符包括listenfd（服务器监听socket文件描述符）、connfd（客户连接的socket文件描述符）。需要注意的是：（1）文件描述符要设置为非阻塞；（2）添加客户连接的sockfd时需要设置为EPOLLONESHOT模式，保证一个socket连接同一时间只会被一个线程操作。
+
 `removefd`方法用于从epoll内核事件表中删除事件。`modfd`方法用于修改epoll中的文件描述符，它的一个很重要的功能是用来重置`EPOLLONESHOT`事件，保证下次有读事件触发时候可以被epoll监听到
+
+> 常用的epoll事件：
+> - EPOLLIN：表示对应的文件描述符可以读（包括对端SOCKET正常关闭）；
+> - EPOLLOUT：表示对应的文件描述符可以写；
+> - EPOLLPRI：表示对应的文件描述符有紧急的数据可读（这里应该表示有带外数据到来）；
+> - EPOLLERR：表示对应的文件描述符发生错误；
+> - EPOLLHUP：表示对应的文件描述符被挂断；
+> - EPOLLRDHUP：表示对应的文件描述符读关闭
+> - EPOLLET： 将EPOLL设为边缘触发(Edge Triggered)模式，这是相对于水平触发(Level Triggered)来说的。
+> - EPOLLONESHOT：只监听一次事件，当监听完这次事件之后，如果还需要继续监听这个socket的话，需要再次把这个socket加入到EPOLL队列里
+
 
 ### 类方法说明
 
@@ -77,19 +92,21 @@
 `close_conn`函数用于关闭客户连接，需要进行的操作包括：（1）将`m_sockfd`从epoll内核事件表中删除（调用removefd实现）；（2）将该`m_sockfd`置为-1，也就是让该文件描述符失效；（3）总用户数量减少1个。
 
 **read/write**
+
 `read`用于一次性读取数据，直到对方关闭连接，读数据用的是`recv`函数，这是socket提供了特有的读入数据函数，若返回值为0表示对方已关闭连接，返回值>0表示读取正确，返回的是读入的数据长度，需要更新m_read_idx，若返回值为-1则表示读取出错，如果errno为`EAGAIN`或者`EWOULDBLOCK`表示读取完毕，接受缓冲区为空，在非阻塞io下会立刻返回-1.
 
 `write`
 
 **process**
-用于
-1. 解析用户发送来的请求报文（proactor模式下数据的读入由主线程完成）；
-2. 获取用户所请求的资源，拼接得到响应报文，发送给客户端 
+
+用于解析用户发送来的请求报文（proactor模式下数据的读入由主线程完成），以及获取用户所请求的资源，拼接得到响应报文，发送给客户端 。
+
+1、解析HTTP请求
 
 请求报文：
 ```html
-GET / HTTP/1.1
-Host: 47.115.202.0:12345
+GET / HTTP/1.1\r\n
+Host: 47.115.202.0:12345\r\n
 Connection: keep-alive
 Upgrade-Insecure-Requests: 1
 User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 Edg/114.0.1823.79
@@ -97,3 +114,15 @@ Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/a
 Accept-Encoding: gzip, deflate
 Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6
 ```
+
+![](readme_img/http请求报文格式.png)
+
+用到了**有限状态机**，包括一个从状态机（用于解析一行）和一个主状态机（标识当前正在分析请求行/头部字段/请求体）。
+
+从状态机就是一个`parse_line`函数，用于从`m_read_buffer`中解析处一行，它的状态包括`LINE_OK,LINE_BAD,LINE_OPEN`，分别表示读取到一个完整行、行出错、行数据尚不完整。具体的处理过程如下：
+1. 挨个检查`m_read_buffer`中`m_checked_idx`到`m_read_idx-1`之间的字节，判断是否存在行结束符，并更新`m_checked_idx`
+2. 如果不存在行结束符，则返回`LINE_OPEN`，后续程序继续调用`recv`接受更多数据。
+3. 如果读取到了完整行，就返回`LINE_OK`，并将该行交给`process_read`中的主状态机来处理，主状态机根据当前的状态`m_check_state`判断该行是请求首行、请求头或者请求体，分别交给不同的函数处理。
+
+2、生成响应
+
