@@ -76,22 +76,20 @@ todo:
 6. 用于将http响应写入到连接socket的参数，包括用于分散读（`writev`）的参数`m_iv`和`m_iv_count`，和用于发送数据的参数`btytes_to_send`和`bytes_have_send`。
 
 ### 工具类方法说明
-包括用于将文件描述符设置为非阻塞的函数`setnonblocking`，该函数通过调用fcntl方法实现，修改`flag`添加`O_NONBLOCK`属性即可。
+1. `setnonblocking`函数：用于将文件描述符设置为非阻塞的函数，该函数通过调用fcntl方法实现，修改`flag`添加`O_NONBLOCK`属性即可。
+2. `addfd`函数：用于向epoll中添加需要监听的文件描述符，需要添加的文件描述符包括服务器监听socket文件描述符、客户连接的socket文件描述符。需要注意的是：文件描述符要设置为非阻塞，添加客户连接的sockfd时需要设置为EPOLLONESHOT模式，保证一个socket连接同一时间只会被一个线程操作。
+3. `removefd`函数：用于从epoll内核事件表中删除事件。
+4. `modfd`函数：用于修改epoll中的文件描述符，它的一个很重要的功能是用来重置`EPOLLONESHOT`事件，保证下次有读事件触发时候可以被epoll监听到
 
-除此之外还有`addfd/removefd/modfd`方法，其中：
-`addfd`用于向epoll中添加需要监听的文件描述符，需要添加的文件描述符包括listenfd（服务器监听socket文件描述符）、connfd（客户连接的socket文件描述符）。需要注意的是：（1）文件描述符要设置为非阻塞；（2）添加客户连接的sockfd时需要设置为EPOLLONESHOT模式，保证一个socket连接同一时间只会被一个线程操作。
-
-`removefd`方法用于从epoll内核事件表中删除事件。`modfd`方法用于修改epoll中的文件描述符，它的一个很重要的功能是用来重置`EPOLLONESHOT`事件，保证下次有读事件触发时候可以被epoll监听到
-
-> 常用的epoll事件：
-> - EPOLLIN：表示对应的文件描述符可以读（包括对端SOCKET正常关闭）；
-> - EPOLLOUT：表示对应的文件描述符可以写；
-> - EPOLLPRI：表示对应的文件描述符有紧急的数据可读（这里应该表示有带外数据到来）；
-> - EPOLLERR：表示对应的文件描述符发生错误；
-> - EPOLLHUP：表示对应的文件描述符被挂断；
-> - EPOLLRDHUP：表示对应的文件描述符读关闭
-> - EPOLLET： 将EPOLL设为边缘触发(Edge Triggered)模式，这是相对于水平触发(Level Triggered)来说的。
-> - EPOLLONESHOT：只监听一次事件，当监听完这次事件之后，如果还需要继续监听这个socket的话，需要再次把这个socket加入到EPOLL队列里
+常用的epoll事件：
+- EPOLLIN：表示对应的文件描述符可以读（包括对端SOCKET正常关闭）；
+- EPOLLOUT：表示对应的文件描述符可以写；
+- EPOLLPRI：表示对应的文件描述符有紧急的数据可读（这里应该表示有带外数据到来）；
+- EPOLLERR：表示对应的文件描述符发生错误；
+- EPOLLHUP：表示对应的文件描述符被挂断；
+- EPOLLRDHUP：表示对应的文件描述符读关闭
+- EPOLLET： 将EPOLL设为边缘触发(Edge Triggered)模式，这是相对于水平触发(Level Triggered)来说的。
+- EPOLLONESHOT：只监听一次事件，当监听完这次事件之后，如果还需要继续监听这个socket的话，需要再次把这个socket加入到EPOLL队列里
 
 
 ### 公有类方法说明
@@ -106,11 +104,11 @@ todo:
 
 用于初始化新的连接，需要进行的操作包括设置端口复用、将新的sockfd添加到epoll内核事件表中，以及更新总用户数量。
 
-**`close_conn`函数**
+**3、`close_conn`函数**
 
 用于关闭客户连接，需要进行的操作包括：将连接socket从epoll内核事件表中删除、将该`m_sockfd`置为-1，也就是让该文件描述符失效，以及更新总用户数量
 
-**`read`函数**
+**4、`read`函数**
 用于读取HTTP请求报文，用非阻塞的方式一次性读完所有数据，直到对方关闭连接
 
 - 读数据用的是`recv`函数，这是socket提供了特有的读入数据函数，若返回值为0表示对方已关闭连接，返回`false`；
@@ -127,13 +125,11 @@ todo:
 采用的方式是分散写`writev`，即把多个内存块的数据一次性写入指定的文件描述符`m_sockfd`
 1. 若要发送的数据字节数为0，即`bytes_to_sent`等于0，说明本次响应结束，将epoll内核事件表中
 该连接socket重新设置为`EPOLLIN`模式，表示继续监听数据可读事件发生。
-2. 接下来用`wirtev`采用非阻塞的方式循环写入数据
-  - 若`writev`返回值为-1，说明写入错误，可能包括两种情况：i. `errno`为`EAGAIN`，表示tcp写缓冲区暂时没有空间了，
+2. 接下来用`wirtev`采用非阻塞的方式循环写入数据。
+3. 若`writev`返回值为-1，说明写入错误，可能包括两种情况：i. `errno`为`EAGAIN`，表示tcp写缓冲区暂时没有空间了，
   这种情况下修改epoll内核事件表中该连接socket的监听事件为`EPOLLOUT`，当socket写缓冲区从满到不满状态时候会触发`EPOLLOUT`事件，这个时候再把剩余数据发送出去即可，所以这时还不能调用`init`；ii. 其它错误，则释放内存映射去区并返回`false`，主线程中发现`write`失败后，就会关闭连接。
-  - 若`writev`返回值大于等于0，返回的值为发送的数据的字节数，则更新`bytes_to_send`和`bytes_have_send`，
-  并调整待发送内存块剩余数据的起始位置为长度，等待下一轮循环继续发送。
-  - 若`bytes_to_send`小于等于0，说明数据发送完毕了，此时需要释放内存缓冲区并重新注册事件`EPOLLIN`。
-  如果`m_linger`为真说明客户端希望能保持连接，这时需要调用`init`初始化变量，返回`true`，表示并不断开连接，否则返回`false`。
+4. 若`writev`返回值大于等于0，返回的值为发送的数据的字节数，则更新`bytes_to_send`和`bytes_have_send`，
+  并调整待发送内存块剩余数据的起始位置为长度，若更新后的`bytes_to_send`小于等于0，说明数据发送完毕了，此时需要释放内存缓冲区并重新注册事件`EPOLLIN`，然后根据`m_linger`的值判断是否要保持连接，若`m_linger`为真，则保持连接，先调用`init`初始化变量，然后返回`true`；若`m_linger`为假，则返回`false`，表示断开连接。
 
 ### 私有类方法说明
 
@@ -195,3 +191,5 @@ Transfer-Encoding: chunked
 
 核心函数为`process_write`，该函数根据http请求的解析结果生成对应的响应信息，响应信息包括响应状态行、响应头和响应体。
 所有的响应数据通过调用`add_response`函数写入写缓冲区，该函数用到了c语言的可变参数编程。
+
+## 定时器(`timer.h`)

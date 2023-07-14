@@ -60,7 +60,7 @@ private:
     HTTP_CODE process_read(); /* 解析http请求 */
     HTTP_CODE parse_request_line(char * text); /* 解析请求首行 */
     HTTP_CODE parse_headers(char * text);      /* 解析请求头 */
-    HTTP_CODE parse_content(char * text);      /* 解析请求体*/
+    HTTP_CODE parse_content(char * text);      /* 解析请求体 */
     LINE_STATUS parse_line(); /* 解析一行 */
     char * get_line() {return m_read_buffer + m_start_line; } /* 获取一行数据 */
     HTTP_CODE do_request(); /* 处理请求内容 */
@@ -94,6 +94,7 @@ private:
     char * m_host; /* 主机名 */
     bool m_linger; /* 判断http请求是否要保持连接 */
     int m_content_length; /* 请求体长度 */
+    //操作http请求资源
     char m_real_file[FILENAME_LEN]; /* 真实的文件地址 */
     struct stat m_file_stat; /* 目标文件的状态，可用于判断文件是否存在、是否为目录、是否可读，并获取文件大小等信息 */
     char * m_file_address; /* 客户请求的目标文件被mmap到内存中的起始位置 */

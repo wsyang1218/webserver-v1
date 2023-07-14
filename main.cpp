@@ -77,7 +77,6 @@ int main(int argc, char* argv[]) {
             printf("epoll failure\n");
             break;
         }
-
         for (int i = 0; i < ret; ++i) {
             int sockfd = events[i].data.fd; /* 获取监听到的文件描述符 */
             if (sockfd == listenfd) {  

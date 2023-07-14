@@ -83,7 +83,7 @@ void http_conn::init() {
 
     bzero(m_read_buffer, READ_BUFFER_SIZE); //清空读缓冲区
     bzero(m_write_buffer, WRITE_BUFFER_SIZE); //清空写缓冲区
-    bzero(m_real_file, FILENAME_LEN);
+    bzero(m_real_file, FILENAME_LEN); //初始化文件地址
 }
 
 /* 关闭一个连接 */
@@ -104,7 +104,8 @@ bool http_conn::read() {
     while (true) {
         bytes_read = recv(m_sockfd, m_read_buffer + m_read_idx, READ_BUFFER_SIZE - m_read_idx, 0);
         if (bytes_read == -1) {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) break; //没有数据了
+            if (errno == EAGAIN || errno == EWOULDBLOCK) 
+                break; //没有数据了
             return false;
         } else if (bytes_read == 0) {// 对方关闭连接了
             return false;
@@ -210,6 +211,7 @@ http_conn::HTTP_CODE http_conn::parse_headers(char * text){
 
 /* 处理请求的具体内容， */
 http_conn::HTTP_CODE http_conn::do_request() {
+    printf("check\n");
     strcpy(m_real_file, doc_root);
     int len = strlen(doc_root);
     strncpy(m_real_file + len, m_url, FILENAME_LEN - len - 1);
@@ -294,7 +296,6 @@ bool http_conn::write() {
             if (errno == EAGAIN) {
                 //TCP写缓冲区没有空间，则等待下一次的EPOLLOUT事件
                 modfd(m_epollfd, m_sockfd, EPOLLOUT);
-                init();
                 return true;
             }
             //若为其他错误，则释放内存映射区并返回false
