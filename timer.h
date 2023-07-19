@@ -5,8 +5,8 @@
 #include <arpa/inet.h>
 #include <stdio.h>
 
-#define BUFFER_SIZE 64
 class util_timer; /* 前向声明 */
+// #define BUFFER_SIZE 64
 
 /* 用户数据结构，包括客户端socket地址、socket文件描述符、读缓存和定时器*/
 struct client_data {
@@ -124,9 +124,9 @@ void sort_timer_lst::del_timer(util_timer *timer) {
 /* SIGALRM信号每次触发就是其信号处理函数（若使用统一事件源，则是主函数）中执行一次tick函数，处理链表上的到期任务 */
 void sort_timer_lst::tick() {
     if (!head) return;
-    printf("timer tick\n");
     time_t cur = time(NULL); //获取系统当前时间
     util_timer* tmp = head;
+    printf("timer tick\n");
     //从头节点开始依次处理每个定时器，直到遇到一个尚未到期的定时器
     while (tmp) {
         //每个定时器使用绝对时间作为超时值，通过比较定时器的超时时间和当前时间判断定时器是否到期
