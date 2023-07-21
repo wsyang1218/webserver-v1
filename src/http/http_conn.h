@@ -17,7 +17,7 @@
 #include <errno.h>
 #include <sys/uio.h>
 #include <string.h>
-#include "locker.h"
+#include "../locker/locker.h"
 
 /* 定义HTTP连接任务类 */
 

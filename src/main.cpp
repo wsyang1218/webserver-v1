@@ -10,10 +10,11 @@
 #include <sys/epoll.h> 
 #include <signal.h>
 #include <sys/epoll.h>
-#include "locker.h"
-#include "threadpool.h"
-#include "http_conn.h"
-#include "timer.h"
+#include "./locker/locker.h"
+#include "./threadpool/threadpool.h"
+#include "./http/http_conn.h"
+#include "./http/http_conn.cpp"
+#include "./timer/timer.h"
 
 #define MAX_FD 65535 //最大的文件描述符个数
 #define MAX_EVENT_NUMBER 10000 //epoll一次监听的最大的事件的数量
@@ -24,11 +25,10 @@ static sort_timer_lst timer_lst; //定时器类
 static int epollfd = 0;
 static http_conn * users = new http_conn[ MAX_FD ]; //创建一个数组用于保存所有的客户端信息
 
-extern void setnonblocking(int fd); /* 设置文件描述符为非阻塞 */
-extern int addfd(int epollfd, int fd, bool onshot); /* 添加文件描述符到epoll中 */
-extern int removefd(int epollfd, int fd); /* 从epoll中删除文件描述符 */
-extern void modfd(int epollfd, int fd, int ev); /* 修改epoll中的文件描述符 */
-
+// extern void setnonblocking(int fd); /* 设置文件描述符为非阻塞 */
+// extern int addfd(int epollfd, int fd, bool onshot); /* 添加文件描述符到epoll中 */
+// extern int removefd(int epollfd, int fd); /* 从epoll中删除文件描述符 */
+// extern void modfd(int epollfd, int fd, int ev); /* 修改epoll中的文件描述符 */
 
 /* 信号处理函数 */
 void sig_handler(int sig) {
