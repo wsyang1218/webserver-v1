@@ -1,4 +1,5 @@
 #include "http_conn.h"
+#include "../logger/logger.h"
 
 //定义HTTP响应的一些状态信息的描述
 const char* ok_200_title = "OK";
@@ -10,9 +11,8 @@ const char* error_404_title = "Not Found";
 const char* error_404_form = "The requested file was not found on this server.\n";
 const char* error_500_title = "Internal Error";
 const char* error_500_form = "There was an unusual problem serving the requested file.\n";
-
-/* 网站的根目录 */
-const char* doc_root = "/root/webserver_v1/resources";
+/* 定义HTTP连接任务类 */
+const char* doc_root = "/root/webserver_v1/resources"; //网站根目录
 
 /* 初始化静态变量 */
 int http_conn::m_epollfd = -1;
@@ -112,7 +112,6 @@ bool http_conn::read() {
         }
         m_read_idx += bytes_read; //更新索引
     }
-    printf("读取到了数据：%s\n", m_read_buffer);
     return true;
 }
 
@@ -204,7 +203,7 @@ http_conn::HTTP_CODE http_conn::parse_headers(char * text){
         text += strspn(text, " \t");
         m_host = text;
     } else {
-        printf("oop! unknown header %s\n", text);
+        LOG_WARN("oop! unknown header %s\n", text);
     }
     return NO_REQUEST;
 }
@@ -242,7 +241,7 @@ http_conn::HTTP_CODE http_conn::process_read() {
             || (line_status = parse_line()) == LINE_OK) { //解析到了一行完整的数据
         text = get_line(); //获取一行数据
         m_start_line = m_checked_idx;
-        printf("got 1 http line : %s\n", text);
+        LOG_INFO("Got 1 http line : %s\n", text);
         switch (m_check_state) {
         case CHECK_STATE_REQUESTLINE: {
             ret = parse_request_line(text);

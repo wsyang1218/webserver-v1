@@ -19,7 +19,7 @@
 #include <string.h>
 #include "../locker/locker.h"
 
-/* 定义HTTP连接任务类 */
+
 
 class http_conn {
 public:
@@ -48,6 +48,7 @@ public:
 public:
     http_conn() {}
     ~http_conn() {}
+    int getfd() { return m_sockfd; }
     void process(); /* 处理客户端请求 */
     void init(int sockfd, const sockaddr_in & addr); /* 初始化新接收的连接 */
     void close_conn(); /* 关闭连接 */

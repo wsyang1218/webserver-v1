@@ -1,49 +1,5 @@
-#ifndef LST_TIMER_H
-#define LST_TIMER_H
-
-#include <time.h>
-#include <arpa/inet.h>
-#include <stdio.h>
-
-class util_timer; /* 前向声明 */
-// #define BUFFER_SIZE 64
-
-/* 用户数据结构，包括客户端socket地址、socket文件描述符、读缓存和定时器*/
-struct client_data {
-    sockaddr_in address; /* 客户端socket地址 */
-    int sockfd;          /* socket文件描述符 */
-    // char buf[ BUFFER_SIZE ]; /* 读缓存*/
-    util_timer* timer;      /* 定时器 */
-};
-
-/* 定时器类 */
-class util_timer {
-public:
-    util_timer() : prev(NULL), next(NULL) {}
-public:
-    time_t expire; /* 任务超时时间，这里使用绝对时间 */
-    void (*cb_func) (client_data* ); /* 任务回调函数 */
-    client_data* user_data; /* 回到函数处理的客户数据，由定时器的执行者传递给回调函数 */
-    util_timer* prev; /* 指向前一个定时器 */
-    util_timer* next; /* 指向下一个定时器 */
-};
-
-/* 定时器链表，是一个升序、双向链表，且带有头节点和尾节点 */
-class sort_timer_lst {
-public:
-    sort_timer_lst() : head(NULL), tail(NULL) {}
-    ~sort_timer_lst();  /* 链表被销毁时，需要删除其中所有的定时器 */
-    void add_timer(util_timer* timer);    /* 将目标定时器timer加入到链表中 */
-    void adjust_timer(util_timer* timer); /* 当某个定时器任务发生变化时，调整对应的定时器在链表中的位置 */
-    void del_timer(util_timer *timer);    /* 将指定的定时器timer从链表中删除 */
-    void tick(); /* SIGALRM信号每次触发就是其信号处理函数（若使用统一事件源，则是主函数）中执行一次tick函数，处理链表上的到期任务 */
-private:
-    void add_timer(util_timer* timer, util_timer* lst_head); /* 将目标定时器timer添加到lst_head之后的部分链表中 */
-    /* 这是一个重载的辅助函数，被公有的add_timer函数和adjust_timer函数调 */
-private:
-    util_timer* head; /* 头节点 */
-    util_timer* tail; /* 尾节点 */
-};
+#include "lst_timer.h"
+#include "../http/http_conn.h"
 
 /* 链表被销毁时，需要删除其中所有的定时器 */
 sort_timer_lst::~sort_timer_lst() {
@@ -165,4 +121,64 @@ void sort_timer_lst::add_timer(util_timer* timer, util_timer* lst_head) {
     }
 }
 
-#endif
+
+/* 设置文件描述符非阻塞 */
+void Utils::setnonblocking(int fd) {
+    int old_flag = fcntl(fd, F_GETFL);
+    old_flag |= O_NONBLOCK;
+    fcntl(fd, F_SETFL, old_flag);
+}
+
+/* 向epoll中添加需要监听的文件描述符 */
+void Utils::addfd(int epollfd, int fd, bool one_shot) {
+    epoll_event event;
+    event.data.fd = fd;
+    event.events = EPOLLIN | EPOLLRDHUP | EPOLLET;
+    if (one_shot) {
+        event.events |= EPOLLONESHOT;
+    }
+    epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &event); //向epoll中添加事件
+    setnonblocking(fd); //设置文件描述符非阻塞
+}
+
+/* 将文件描述符从epoll中删除 */
+void Utils::removefd(int epollfd, int fd) {
+    epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, 0);
+    close(fd);
+}
+
+/* 修改epoll中的文件描述符 */
+void Utils::modfd(int epollfd, int fd, int ev) {
+    epoll_event event;
+    event.data.fd = fd;
+    event.events = ev | EPOLLONESHOT | EPOLLRDHUP; //需要重置EPOLLONESHOT事件，确保下次可读时，EPOLLIN事件能够被触发
+    epoll_ctl(epollfd, EPOLL_CTL_MOD, fd, &event);
+}
+
+/* 设置信号处理函数 */
+void Utils::addsig(int sig, void( handler )(int)) {
+    struct sigaction sa;
+    memset(&sa, '\0', sizeof(sa));
+    sa.sa_handler = handler;
+    sigfillset(&sa.sa_mask);
+    sigaction(sig, &sa, NULL);
+}
+
+void Utils::sig_handler(int sig) {
+    //为保证函数的可重入性，保留原来的errno
+    int save_errno = errno;
+    int msg = sig;
+    send(u_pipefd[1], (char *)&msg, 1, 0);
+    errno = save_errno;
+}
+
+int *Utils::u_pipefd = 0;
+int Utils::u_epollfd = 0;
+
+class Utils;
+void cb_func(client_data * user_data) {
+    epoll_ctl(Utils::u_epollfd, EPOLL_CTL_DEL, user_data->sockfd, 0);
+    assert(user_data);
+    close(user_data->sockfd);
+    http_conn::m_user_count--;
+}
