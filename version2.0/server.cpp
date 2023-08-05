@@ -107,11 +107,15 @@ void Server::start() {
         // 处理定时事件
         // 用timeout标记有定时事件需要处理，但是不立即处理，因为定时任务的优先级比较低，需要优先处理其它任务
         if (timeout) {
-            timer_lst.tick(); //处理定时器任务实际上就是调用tick信号
-            alarm(TIMESLOT); //alarm调用只会引起一次SIGALRM信号，所以要重新定时，以不管出发SIGALRM信号
+            timer_handler();
             timeout = false;
         }
     }
+}
+
+void Server::timer_handler() {
+    timer_lst.tick(); //处理定时器任务实际上就是调用tick信号
+    alarm(TIMESLOT); //alarm调用只会引起一次SIGALRM信号，所以要重新定时，以不管出发SIGALRM信号
 }
 
 void Server::send_error(int fd, const char * info) {

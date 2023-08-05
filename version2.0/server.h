@@ -6,6 +6,7 @@
 #include "./http/http_conn.h"
 #include "./threadpool/threadpool.h"
 #include "./timer/lst_timer.h"
+#include "./utils/utils.h"
 
 using namespace std;
 
@@ -23,6 +24,7 @@ public:
     void set_events();
     void start();
 private:
+    void timer_handler();
     void send_error(int fd, const char * info);
     void add_client(int fd, sockaddr_in & addr);
     void deal_listen_event();

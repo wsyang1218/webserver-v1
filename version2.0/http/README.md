@@ -129,7 +129,7 @@ X-Frame-Options: sameorigin
 X-Ua-Compatible: IE=Edge,chrome=1
 Transfer-Encoding: chunked
 ```
-![](readme_img/http响应状态码.webp)
+![](imgs/http响应状态码.webp)
 
 核心函数为`process_write`，该函数根据http请求的解析结果生成对应的响应信息，响应信息包括响应状态行、响应头和响应体。
 所有的响应数据通过调用`add_response`函数写入写缓冲区，该函数用到了c语言的可变参数编程。

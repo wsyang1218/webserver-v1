@@ -12,7 +12,7 @@ const char* error_404_form = "The requested file was not found on this server.\n
 const char* error_500_title = "Internal Error";
 const char* error_500_form = "There was an unusual problem serving the requested file.\n";
 /* 定义HTTP连接任务类 */
-const char* doc_root = "/root/webserver_v1/resources"; //网站根目录
+const char* doc_root = "/root/my_webserver/resources"; //网站根目录
 
 /* 初始化静态变量 */
 int http_conn::m_epollfd = -1;

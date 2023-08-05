@@ -61,21 +61,5 @@ private:
     util_timer* tail; /* 尾节点 */
 };
 
-class Utils {
-public:
-    Utils() {}
-    ~Utils() {}
-    void setnonblocking(int fd); // 设置文件描述符非阻塞
-    void addfd(int epollfd, int fd, bool one_shot); // 向epoll中添加需要监听的文件描述符
-    void removefd(int epollfd, int fd); // 将文件描述符从epoll中删除
-    void modfd(int epollfd, int fd, int ev); // 修改epoll中的文件描述符
-    void addsig(int sig, void( handler )(int)); // 设置信号处理函数
-    static void sig_handler(int sig);
-public:
-    static int * u_pipefd;
-    static int u_epollfd;
-};
-
-void cb_func(client_data *user_data);
 
 #endif
