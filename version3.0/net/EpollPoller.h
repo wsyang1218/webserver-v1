@@ -9,7 +9,6 @@
 #include <poll.h>
 #include <sys/epoll.h>
 #include "Channel.h"
-#include "EventLoop.h"
 #include "HttpData.h"
 #include "Timer.h"
 

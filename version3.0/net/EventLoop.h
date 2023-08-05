@@ -2,17 +2,21 @@
 
 #include <functional>
 #include <memory>
+#include <sys/epoll.h>
+#include <sys/eventfd.h>
 #include <vector>
+#include <iostream>
 
-#include "Channel.h"
 #include "EpollPoller.h"
+#include "Channel.h"
 #include "Util.h"
 #include "../base/CurrentThread.h"
 #include "../base/Logging.h"
 #include "../base/Thread.h"
+#include "../base/MutexLock.h"
 
 using namespace std;
-#include <iostream>
+
 // 每个线程只能有一个EventLoop对象，因此在构造函数中要检查当前线程是否已经创建了其他EventLoop对象，遇到错误就终止程序：
 // 1. EventLoop构造函数要记住本对象所属的线程（threadId_）
 // 2. 创建了EventLoop对象的线程是IO线程，主要功能是运行时间循环（loop()）
@@ -29,7 +33,7 @@ public:
     void runInLoop(Functor && cb);
     void queueInLoop(Functor && cb);
     bool isInLoopThread() const { return threadId_ == CurrentThread::tid(); }
-    void assertInLoopThread();
+    void assertInLoopThread() { assert(isInLoopThread()); }
 
     // 修改poller中监听的文件描述符（channel）的状态
     void shutdown(SPChannel channel) { shutDownWR(channel->getfd()); } // 断开套接字的输出流

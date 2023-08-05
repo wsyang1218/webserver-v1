@@ -11,12 +11,6 @@ namespace CurrentThread {
     extern __thread const char* t_threadName;
 
     // 缓存线程id
-    inline int tid() {
-        if (t_cachedTid == 0) { // 该tid没有被缓存过
-            cacheTid(); // 缓存tid
-        }
-        return t_cachedTid;
-    }
     inline void cacheTid() {
         if (t_cachedTid == 0) {
             t_cachedTid = static_cast<pid_t>(::syscall(SYS_gettid)); // 获取线程唯一id
@@ -24,6 +18,12 @@ namespace CurrentThread {
         }
     }
 
+    inline int tid() {
+        if (t_cachedTid == 0) { // 该tid没有被缓存过
+            cacheTid(); // 缓存tid
+        }
+        return t_cachedTid;
+    }
     // 用于logging
     inline const char* tidString() { return t_tidString; }
     inline const char* name() { return t_threadName; }

@@ -1,9 +1,9 @@
 # MAINSOURCE代表含有main入口函数的cpp文件，因为含有测试代码，
 # 所以要为多个目标编译，这里把Makefile写的通用了一点，
 # 以后加东西Makefile不用做多少改动
-MAINSOURCE := Main.cpp base/tests/LoggingTest.cpp tests/HTTPClient.cpp
+MAINSOURCE := Main.cpp
 # MAINOBJS := $(patsubst %.cpp,%.o,$(MAINSOURCE))
-SOURCE  := $(wildcard *.cpp base/*.cpp tests/*.cpp)
+SOURCE  := $(wildcard *.cpp base/*.cpp net/*.cpp)
 override SOURCE := $(filter-out $(MAINSOURCE),$(SOURCE))
 OBJS    := $(patsubst %.cpp,%.o,$(SOURCE))
 
@@ -14,16 +14,11 @@ INCLUDE:= -I./usr/local/lib
 CFLAGS  := -std=c++11 -g -Wall -O3 -D_PTHREADS
 CXXFLAGS:= $(CFLAGS)
 
-# Test object
-SUBTARGET1 := LoggingTest
-SUBTARGET2 := HTTPClient
-
 .PHONY : objs clean veryclean rebuild all tests debug
-all : $(TARGET) $(SUBTARGET1) $(SUBTARGET2)
+all : $(TARGET)
 objs : $(OBJS)
 rebuild: veryclean all
 
-tests : $(SUBTARGET1) $(SUBTARGET2)
 clean :
 	find . -name '*.o' | xargs rm -f
 veryclean :
@@ -34,7 +29,7 @@ veryclean :
 debug:
 	@echo $(SOURCE)
 
-$(TARGET) : $(OBJS) Main.o
+$(TARGET) : $(OBJS) main.o
 	$(CC) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 # $@代表目标，这里是$(TARGET)
 

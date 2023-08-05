@@ -17,7 +17,7 @@ void Thread::start() {
 }
 
 int Thread::join() {
-	assert(started);
+	assert(started_);
 	return pthread_join(threadId_, NULL);
 	return 0;
 }

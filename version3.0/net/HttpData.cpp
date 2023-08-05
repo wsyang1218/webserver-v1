@@ -153,7 +153,7 @@ void HttpData::seperateTimer() {
 }
 
 void HttpData::handleRead() {
-  __uint32_t &events_ = channel_->getEvents();
+  int &events_ = channel_->getEvents();
   do {
     bool zero = false;
     int read_num = readn(fd_, inBuffer_, zero);
@@ -269,7 +269,7 @@ void HttpData::handleRead() {
 
 void HttpData::handleWrite() {
   if (!error_ && connectionState_ != H_DISCONNECTED) {
-    __uint32_t &events_ = channel_->getEvents();
+    int &events_ = channel_->getEvents();
     if (writen(fd_, outBuffer_) < 0) {
       perror("writen");
       events_ = 0;
@@ -281,7 +281,7 @@ void HttpData::handleWrite() {
 
 void HttpData::handleConn() {
   seperateTimer();
-  __uint32_t &events_ = channel_->getEvents();
+  int &events_ = channel_->getEvents();
   if (!error_ && connectionState_ == H_CONNECTED) {
     if (events_ != 0) {
       int timeout = DEFAULT_EXPIRED_TIME;

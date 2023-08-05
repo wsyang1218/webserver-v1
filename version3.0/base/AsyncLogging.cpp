@@ -36,7 +36,7 @@ void AsyncLogging::append(const char* logline, int len) {
     else
       currentBuffer_.reset(new Buffer);
     currentBuffer_->append(logline, len);
-    cond_.notify();
+    cond_.signal();
   }
 }
 
@@ -59,7 +59,7 @@ void AsyncLogging::threadFunc() {
       MutexLockGuard lock(mutex_);
       if (buffers_.empty())  // unusual usage!
       {
-        cond_.waitForSeconds(flushInterval_);
+        cond_.timewait(flushInterval_);
       }
       buffers_.push_back(currentBuffer_);
       currentBuffer_.reset();

@@ -1,9 +1,4 @@
 #include "EventLoop.h"
-#include <sys/epoll.h>
-#include <sys/eventfd.h>
-#include <iostream>
-#include "Util.h"
-#include "base/Logging.h"
 
 using namespace std;
 
@@ -31,8 +26,8 @@ EventLoop::EventLoop() :
     pwakeupChannel_(new Channel(this, wakeupFd_)) {
     // 保证one loop per thread
     if (t_loopInThisThread) {
-        LOG << "Another EventLoop " << t_loopInThisThread 
-            << " exists int this thread " << threadId_;
+        // LOG << "Another EventLoop " << t_loopInThisThread 
+        //     << " exists int this thread " << threadId_;
     } else {
         t_loopInThisThread = this;
     }
@@ -49,6 +44,16 @@ EventLoop::~EventLoop() {
 
 void EventLoop::handleConn() {
     updatePoller(pwakeupChannel_);
+}
+
+void EventLoop::handleRead() {
+    uint64_t one = 1;
+    ssize_t n = readn(wakeupFd_, &one, sizeof one);
+    if (n != sizeof one) {
+        LOG << "EventLoop::handleRead() reads " << n << " bytes instead of 8";
+    }
+    // pwakeupChannel_->setEvents(EPOLLIN | EPOLLET | EPOLLONESHOT);
+    pwakeupChannel_->setEvents(EPOLLIN | EPOLLET);
 }
 
 void EventLoop::runInLoop(Functor&& cb) {
@@ -78,7 +83,6 @@ void EventLoop::loop() {
     assert(isInLoopThread()); // 验证是否运行在正确的线程上
     looping_ = true;
     quit_ = false;
-    LOG << "EventLoop " << this << " start looping";
     std::vector<SPChannel> ret;
     while (!quit_) {
         ret.clear();

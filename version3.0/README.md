@@ -1,5 +1,9 @@
 # WebServer version3.0
 
+## 运行
+```shell
+./WebServer [-t thread_numbers] [-p port] [-l log_file_path(should begin with '/')]
+```
 ## 目标：
 * 使用Epoll边沿触发的IO多路复用技术，非阻塞IO，使用Reactor模式
 * 使用多线程充分利用多核CPU，并使用线程池避免线程频繁创建销毁的开销
@@ -23,3 +27,7 @@ SubReactor可以有一个或者多个，每个subReactor都会在一个独立线
 
 这里使用了eventfd进行异步唤醒（wakeupFd），线程会从epoll_wait中醒来，得到活跃事件，进行处理。
 
+## 参考
+- https://github.com/linyacool/WebServer
+- [万字长文梳理Muduo库核心代码及优秀编程细节思想剖析](https://blog.csdn.net/Jenny_WJN/article/details/104209062)
+- [基于muduo网络库的Webserver](https://zhuanlan.zhihu.com/p/533897842)

@@ -22,12 +22,12 @@ class AsyncLogging : noncopyable {
   void start() {
     running_ = true;
     thread_.start();
-    latch_.wait();
+    latch_.await();
   }
 
   void stop() {
     running_ = false;
-    cond_.notify();
+    cond_.signal();
     thread_.join();
   }
 

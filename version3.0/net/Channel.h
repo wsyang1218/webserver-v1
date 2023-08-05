@@ -21,7 +21,6 @@ class HttpData;
 // 2. 将该fd及其感兴趣事件注册到事件监听器或从事件监听器上移除
 // 3. 保存了该fd的每种事件对应的处理函数
 
-typedef std::shared_ptr<Channel> SPChannel;
 class Channel {
 private:
     // 该Channel的文件描述符上各类事件发生时的处理函数
@@ -91,3 +90,4 @@ private:
     int lastEvents_; //??
     std::weak_ptr<HttpData> holder_; // 方便找到上层持有该Channel的对象
 };
+typedef std::shared_ptr<Channel> SPChannel;
