@@ -29,5 +29,5 @@ SubReactor可以有一个或者多个，每个subReactor都会在一个独立线
 
 ## 参考
 - https://github.com/linyacool/WebServer
-- [万字长文梳理Muduo库核心代码及优秀编程细节思想剖析](https://blog.csdn.net/Jenny_WJN/article/details/104209062)
+- [万字长文梳理Muduo库核心代码及优秀编程细节思想剖析](https://zhuanlan.zhihu.com/p/495016351)
 - [基于muduo网络库的Webserver](https://zhuanlan.zhihu.com/p/533897842)
