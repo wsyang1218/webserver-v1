@@ -28,14 +28,14 @@ class FixedBuffer : noncopyable {
   int length() const { return static_cast<int>(cur_ - data_); }
 
   char* current() { return cur_; }
-  int avail() const { return static_cast<int>(end() - cur_); }
+  int avail() const { return static_cast<int>(end() - cur_); }//剩余空间大小
   void add(size_t len) { cur_ += len; }
 
   void reset() { cur_ = data_; }
   void bzero() { memset(data_, 0, sizeof data_); }
 
  private:
-  const char* end() const { return data_ + sizeof data_; }
+  const char* end() const { return data_ + sizeof data_; }//最后一个字符地址
 
   char data_[SIZE];
   char* cur_;
@@ -49,7 +49,6 @@ class LogStream : noncopyable {
     buffer_.append(v ? "1" : "0", 1);
     return *this;
   }
-
   LogStream& operator<<(short);
   LogStream& operator<<(unsigned short);
   LogStream& operator<<(int);

@@ -312,7 +312,7 @@ void HttpData::handleConn() {
              (events_ & EPOLLOUT)) {
     events_ = (EPOLLOUT | EPOLLET);
   } else {
-    // cout << "close with errors" << endl;
+    cout << "close with errors" << endl;
     loop_->runInLoop(bind(&HttpData::handleClose, shared_from_this()));
   }
 }
@@ -606,8 +606,9 @@ void HttpData::handleError(int fd, int err_num, string short_msg) {
 
 void HttpData::handleClose() {
   connectionState_ = H_DISCONNECTED;
-  shared_ptr<HttpData> guard(shared_from_this());
+  // shared_ptr<HttpData> guard(shared_from_this());
   loop_->removeFromPoller(channel_);
+
 }
 
 void HttpData::newEvent() {

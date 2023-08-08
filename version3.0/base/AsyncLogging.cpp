@@ -50,6 +50,7 @@ void AsyncLogging::threadFunc() {
   newBuffer2->bzero();
   BufferVector buffersToWrite;
   buffersToWrite.reserve(16);
+  // reserve 避免内存重新分配以及内存分配的方式
   while (running_) {
     assert(newBuffer1 && newBuffer1->length() == 0);
     assert(newBuffer2 && newBuffer2->length() == 0);
@@ -57,16 +58,16 @@ void AsyncLogging::threadFunc() {
 
     {
       MutexLockGuard lock(mutex_);
-      if (buffers_.empty())  // unusual usage!
+      if (buffers_.empty())  // 缓冲区为空，等待生产者写入数据
       {
-        cond_.timewait(flushInterval_);
+        cond_.timewait(flushInterval_);//等待了fulushInterval时间后还没有等到信号也直接将现有的currentBuffer_给push进buffers_写入
       }
       buffers_.push_back(currentBuffer_);
-      currentBuffer_.reset();
+      currentBuffer_.reset();//重置shared_ptr
 
-      currentBuffer_ = std::move(newBuffer1);
-      buffersToWrite.swap(buffers_);
-      if (!nextBuffer_) {
+      currentBuffer_ = std::move(newBuffer1);//获取一块新的buffer
+      buffersToWrite.swap(buffers_);//清空buffers
+      if (!nextBuffer_) {// nextBuffer为空
         nextBuffer_ = std::move(newBuffer2);
       }
     }
@@ -95,10 +96,10 @@ void AsyncLogging::threadFunc() {
     }
 
     if (!newBuffer1) {
-      assert(!buffersToWrite.empty());
-      newBuffer1 = buffersToWrite.back();
-      buffersToWrite.pop_back();
-      newBuffer1->reset();
+      assert(!buffersToWrite.empty());//保证buffersToWrite不为空
+      newBuffer1 = buffersToWrite.back();//取最后一个
+      buffersToWrite.pop_back();//删除
+      newBuffer1->reset();//cur_ = data_
     }
 
     if (!newBuffer2) {

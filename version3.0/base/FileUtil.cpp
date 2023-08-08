@@ -32,7 +32,7 @@ void AppendFile::append(const char* logline, const size_t len) {
   }
 }
 
-void AppendFile::flush() { fflush(fp_); }
+void AppendFile::flush() { fflush(fp_); } // 刷新缓冲区，将缓冲区数据写入文件
 
 size_t AppendFile::write(const char* logline, size_t len) {
   return fwrite_unlocked(logline, 1, len, fp_);

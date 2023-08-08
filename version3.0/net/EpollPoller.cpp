@@ -10,6 +10,8 @@
 #include <arpa/inet.h>
 #include "../base/Logging.h"
 
+#include <iostream>
+
 using namespace std;
 
 const int EVENTSNUM = 4096; // 可以监听的事件总数
